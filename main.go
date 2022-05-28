@@ -19,7 +19,10 @@ const (
 	screenHeight = 400
 )
 
-var usersInServer = game.UsersInSerwer
+var (
+	MyID          string
+	usersInServer *game.Users
+)
 
 type Game struct{}
 
@@ -27,10 +30,10 @@ func (g *Game) Update() error {
 
 	if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
 
-		game.Move(usersInServer)
+		game.Move(*usersInServer)
 
 	} else if ebiten.IsMouseButtonPressed(ebiten.MouseButtonRight) {
-		game.PlacingMyWarships(usersInServer)
+		game.PlacingMyWarships(*usersInServer)
 	}
 	return nil
 
@@ -40,7 +43,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	for x := 0; x < 10; x++ {
 		for y := 0; y < 10; y++ {
-			game.DrawAllPlace(x, y, screen, usersInServer)
+			game.DrawAllPlace(x, y, screen, *usersInServer)
 
 		}
 
@@ -52,17 +55,21 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 }
 
 func initialiseGame() {
+	MyID = game.MyID
+
+	game.AddPlayer(MyID)
 
 	for {
-		if len(usersInServer) > 0 {
+		usersInServer = &game.UsersInSerwer
+		if len(*usersInServer) > 0 {
 			////////////initialise plase
 
-			game.InitialPlace(usersInServer)
-			game.InitialMyPlace(usersInServer)
+			game.InitialPlace(*usersInServer)
+			game.InitialMyPlace(*usersInServer)
 
 			////////initialise warships
 
-			game.InitialEnemyWarships(usersInServer)
+			game.InitialEnemyWarships(*usersInServer)
 
 			return
 		}
@@ -78,10 +85,19 @@ var Ready bool
 var done chan interface{}
 var interrupt chan os.Signal
 
-func receiveHandler(connection *websocket.Conn) {
+func receiveHandler(conn *websocket.Conn) {
 	defer close(done)
 	for {
-		_, msg, err := connection.ReadMessage()
+		if MyID == "" {
+			_, id, err := conn.ReadMessage()
+			if err != nil {
+				log.Println("All are bad !!!!!!!!!1", err)
+			}
+			MyID = string(id)
+			log.Println("MyID", MyID)
+		}
+
+		_, msg, err := conn.ReadMessage()
 		if err != nil {
 			log.Println("Error in receive:", err)
 			return
@@ -110,12 +126,12 @@ func main() {
 
 	// Our main loop for the client
 	// We send our relevant packets here
-	go func() {
+	go func(conn *websocket.Conn) {
 		for {
 			select {
 			case <-time.After(time.Duration(1) * time.Millisecond * 1000):
 				var msg string
-				fmt.Fscan(os.Stdin, &msg)
+				fmt.Fscan(os.Stdin, &msg) //write msg
 
 				err := conn.WriteMessage(websocket.TextMessage, []byte(msg))
 				if err != nil {
@@ -143,12 +159,12 @@ func main() {
 				return
 			}
 		}
-	}()
+	}(conn)
 
-	time.Sleep(time.Second * 10)
 	ebiten.SetWindowSize(screenWidth, screenHeight)
+
 	ebiten.SetWindowTitle("My Game")
-	log.Println("My ID ", game.MyID)
+	log.Println("My ID ", MyID)
 	go initialiseGame()
 	if err := ebiten.RunGame(&Game{}); err != nil {
 		log.Fatal(err)

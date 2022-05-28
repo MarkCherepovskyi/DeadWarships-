@@ -30,7 +30,7 @@ type Users map[string]*User
 var (
 	UsersInSerwer = make(Users)
 	chanID        = make(chan string, 4)
-	MyID          string
+	MyID          = ""
 )
 
 type Place struct {
@@ -207,7 +207,7 @@ func DrawAllPlace(x, y int, screen *ebiten.Image, users Users) {
 ///////
 
 func AddPlayer(userID string) string {
-
+	F()
 	user := &User{
 		UserID:                userID,
 		CanMove:               false,
@@ -216,9 +216,13 @@ func AddPlayer(userID string) string {
 	}
 
 	MyID = userID
-
 	log.Println("player add", MyID)
-	UsersInSerwer[userID] = user
 
+	UsersInSerwer[userID] = user
+	F()
 	return MyID
+}
+
+func F() {
+	log.Println("///////", MyID)
 }

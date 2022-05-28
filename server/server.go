@@ -2,6 +2,7 @@
 package main
 
 import (
+	"game/game"
 	"log"
 	"net/http"
 
@@ -13,13 +14,18 @@ type ConnectUser struct {
 	ClienID   string
 }
 
+var U = game.User{}
 var users = make(map[ConnectUser]int)
 var upgrader = websocket.Upgrader{} // use default options
 
-func newConnectUser(conn *websocket.Conn, clienID string) *ConnectUser {
+func newConnectUser(conn *websocket.Conn, clientID string) *ConnectUser {
+	game.AddPlayer(clientID)
+
+	conn.WriteMessage(websocket.TextMessage, []byte(clientID))
+
 	return &ConnectUser{
 		Websocket: conn,
-		ClienID:   clienID,
+		ClienID:   clientID,
 	}
 }
 
@@ -32,14 +38,12 @@ func socketHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Println("Client connected: ", conn.RemoteAddr().String())
 
-	game.chanID <- conn.RemoteAddr().String()
-
 	var socketClient *ConnectUser = newConnectUser(conn, conn.RemoteAddr().String())
 	users[*socketClient] = 0
 	log.Println("Number client conected: ", len(users))
 
 	defer conn.Close()
-	// The event loop
+	// The event loopы
 	for {
 		messageType, message, err := conn.ReadMessage()
 		if err != nil {
