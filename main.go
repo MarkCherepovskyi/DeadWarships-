@@ -120,20 +120,29 @@ func main() {
 	defer conn.Close()
 	go receiveHandler(conn)
 
-	///////////////
-
-	//////////////////
-
 	// Our main loop for the client
 	// We send our relevant packets here
 	go func(conn *websocket.Conn) {
 		for {
 			select {
 			case <-time.After(time.Duration(1) * time.Millisecond * 1000):
-				var msg string
-				fmt.Fscan(os.Stdin, &msg) //write msg
+				//var msg string
+				//fmt.Fscan(os.Stdin, &msg) //write msg
+				log.Println("nunber of my warship ", game.UsersInServer[MyID].NumberOfMyWarship)
+				/*if game.UsersInServer[MyID].NumberOfMyWarship >= 10 {
 
-				err := conn.WriteMessage(websocket.TextMessage, []byte(msg))
+					bufferOfUserForSend, _ := json.Marshal(game.UsersInServer[MyID])
+					err := conn.WriteMessage(websocket.TextMessage, []byte(bufferOfUserForSend))
+					//err := conn.WriteMessage(websocket.TextMessage, []byte("sdfsd"))
+					if err != nil {
+						log.Println("Error during writing to websocket:", err)
+						return
+					}
+					continue
+				}*/
+
+				err := conn.WriteMessage(websocket.TextMessage, []byte("bufferOfUserForSend"))
+				//err := conn.WriteMessage(websocket.TextMessage, []byte("sdfsd"))
 				if err != nil {
 					log.Println("Error during writing to websocket:", err)
 					return

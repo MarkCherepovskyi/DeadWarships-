@@ -29,7 +29,6 @@ type Users map[string]*User
 
 var (
 	UsersInSerwer = make(Users)
-	chanID        = make(chan string, 4)
 	MyID          = ""
 )
 
@@ -130,7 +129,7 @@ func EnemyMove(users Users) {
 }
 
 func PlacingMyWarships(users Users) {
-	if users[MyID].numberOfMyWarship < 10 {
+	if users[MyID].NumberOfMyWarship < 10 {
 		mx, my := ebiten.CursorPosition()
 
 		if mx >= 400 && mx <= 650 && my <= 260 && my >= 10 {
@@ -139,14 +138,12 @@ func PlacingMyWarships(users Users) {
 			bufferY := int((my - 10) / 25)
 			fmt.Println("You press button1111")
 			if bufferX != users[MyID].updateBufferX || bufferY != users[MyID].updateBufferY {
-				users[MyID].arrayMyPlace[(bufferX*10)+bufferY].CreateWarships(bufferX, bufferY, users[MyID].numberOfMyWarship, users)
+				users[MyID].arrayMyPlace[(bufferX*10)+bufferY].CreateWarships(bufferX, bufferY, users[MyID].NumberOfMyWarship, users)
 
 			}
 			users[MyID].updateBufferX = bufferX
 			users[MyID].updateBufferY = bufferY
-			/*if	users[MyID].numberOfMyWarship == 10 {
 
-			}*/
 		}
 	} else {
 		users[MyID].CanMove = true
@@ -199,7 +196,6 @@ func InitialMyPlace(users Users) [100]Place {
 }
 
 func DrawAllPlace(x, y int, screen *ebiten.Image, users Users) {
-	log.Println(MyID)
 	users[MyID].arrayEnemyPlace[(x*10)+y].DrawPlace(screen)
 	users[MyID].arrayMyPlace[(x*10)+y].DrawPlace(screen)
 }
@@ -211,7 +207,6 @@ func AddPlayer(userID string) string {
 	user := &User{
 		UserID:                userID,
 		CanMove:               false,
-		numberOfMyWarship:     10,
 		numberOfEnemyWarships: 10,
 	}
 

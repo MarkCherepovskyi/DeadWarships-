@@ -70,6 +70,7 @@ func socketHandler(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	http.HandleFunc("/socket", socketHandler)
-
+	log.Println("server is ready")
 	log.Fatal(http.ListenAndServe("localhost:9999", nil))
+
 }
