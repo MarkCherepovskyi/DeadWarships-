@@ -3,32 +3,32 @@ package game
 import (
 	"fmt"
 	"log"
+	"math/rand"
 
 	"image/color"
-	"math/rand"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 )
 
 type User struct {
-	UserID                       string     //`json:"id"`
-	CanMove                      bool       //`json:"canMove"`
-	enemyWarships                [10][2]int //`json:"enemyWarships"`
-	myWarships                   [10][2]int //`json:"myWarships"`
+	UserID                       string     `json:"id"`
+	CanMove                      bool       `json:"canMove"`
+	EnemyWarships                [10][2]int `json:"EnemyWarships"`
+	MyWarships                   [10][2]int `json:"MyWarships"`
 	arrayEnemyPlace              [100]Place //`json:"enemyPlace"`
 	arrayMyPlace                 [100]Place //`json:"myPlace"`
-	numberOfMyWarship            int
+	NumberOfMyWarship            int
 	numberOfEnemyWarships        int
 	updateBufferX, updateBufferY int
-	LastMoveX, LastMoveY         int
-
-	EnemyMoveX, EnemyMoveY int
+	LastMoveX                    int `json:"lastMoveX"`
+	LastMoveY                    int `json:"lastMoveY"`
+	EnemyMoveX, EnemyMoveY       int
 }
 
 type Users map[string]*User
 
 var (
-	UsersInSerwer = make(Users)
+	UsersInServer = make(Users)
 	MyID          = ""
 )
 
@@ -47,10 +47,10 @@ func (p *Place) ShotWarship() error {
 
 func (p *Place) CreateWarships(bufferX, bufferY, num int, users Users) error {
 
-	users[MyID].myWarships[num][0] = bufferX
-	users[MyID].myWarships[num][1] = bufferY
+	users[MyID].MyWarships[num][0] = bufferX
+	users[MyID].MyWarships[num][1] = bufferY
 	p.colorPlace = color.RGBA{0, 0, 255, 255}
-	users[MyID].numberOfMyWarship++
+	users[MyID].NumberOfMyWarship++
 
 	return nil
 }
@@ -89,7 +89,7 @@ func Move(users Users) {
 			fmt.Println("You press button")
 
 			for i := 0; i < 10; i++ {
-				if users[MyID].arrayEnemyPlace[(bufferX*10)+bufferY].localx == users[MyID].enemyWarships[i][0] && users[MyID].arrayEnemyPlace[(bufferX*10)+bufferY].localy == users[MyID].enemyWarships[i][1] {
+				if users[MyID].arrayEnemyPlace[(bufferX*10)+bufferY].localx == users[MyID].EnemyWarships[i][0] && users[MyID].arrayEnemyPlace[(bufferX*10)+bufferY].localy == users[MyID].EnemyWarships[i][1] {
 					users[MyID].arrayEnemyPlace[(bufferX*10)+bufferY].ShotWarship()
 					fmt.Println("shot")
 					return
@@ -113,7 +113,7 @@ func EnemyMove(users Users) {
 		enemyX := users[MyID].EnemyMoveX
 		enemyY := users[MyID].EnemyMoveY
 		for i := 0; i < 10; i++ {
-			if users[MyID].arrayMyPlace[(enemyX*10)+enemyY].localx == users[MyID].myWarships[i][0] && users[MyID].arrayMyPlace[(enemyX*10)+enemyY].localy == users[MyID].myWarships[i][1] {
+			if users[MyID].arrayMyPlace[(enemyX*10)+enemyY].localx == users[MyID].MyWarships[i][0] && users[MyID].arrayMyPlace[(enemyX*10)+enemyY].localy == users[MyID].MyWarships[i][1] {
 				users[MyID].arrayMyPlace[(enemyX*10)+enemyY].ShotWarship()
 				fmt.Println("shot by me")
 				return
@@ -123,7 +123,7 @@ func EnemyMove(users Users) {
 
 		users[MyID].arrayMyPlace[(enemyX*10)+enemyY].UpdatePlace()
 
-		users[MyID].CanMove = users[MyID].CanMove
+		users[MyID].CanMove = !users[MyID].CanMove
 	}
 
 }
@@ -171,12 +171,12 @@ func InitialPlace(users Users) [100]Place {
 func InitialEnemyWarships(users Users) [10][2]int {
 	for i := 0; i < users[MyID].numberOfEnemyWarships; i++ {
 		for j := 0; j < 2; j++ {
-			users[MyID].enemyWarships[i][j] = rand.Intn(10)
-			fmt.Println("war...... x: ", users[MyID].enemyWarships[i][0], " war...... y: ", users[MyID].enemyWarships[i][1])
+			users[MyID].EnemyWarships[i][j] = rand.Intn(10)
+			fmt.Println("war...... x: ", users[MyID].EnemyWarships[i][0], " war...... y: ", users[MyID].EnemyWarships[i][1])
 
 		}
 	}
-	return users[MyID].enemyWarships
+	return users[MyID].EnemyWarships
 }
 
 func InitialMyPlace(users Users) [100]Place {
@@ -202,22 +202,19 @@ func DrawAllPlace(x, y int, screen *ebiten.Image, users Users) {
 
 ///////
 
-func AddPlayer(userID string) string {
-	F()
+func AddPlayer(userID string) *User {
+
 	user := &User{
 		UserID:                userID,
 		CanMove:               false,
 		numberOfEnemyWarships: 10,
+		NumberOfMyWarship:     0,
 	}
 
 	MyID = userID
 	log.Println("player add", MyID)
 
-	UsersInSerwer[userID] = user
-	F()
-	return MyID
-}
+	UsersInServer[userID] = user
 
-func F() {
-	log.Println("///////", MyID)
+	return user
 }

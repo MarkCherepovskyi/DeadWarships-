@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"encoding/json"
 	_ "image/png"
 	"log"
 	"os"
@@ -21,7 +21,7 @@ const (
 
 var (
 	MyID          string
-	usersInServer *game.Users
+	usersInServer game.Users
 )
 
 type Game struct{}
@@ -30,10 +30,10 @@ func (g *Game) Update() error {
 
 	if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
 
-		game.Move(*usersInServer)
+		game.Move(usersInServer)
 
 	} else if ebiten.IsMouseButtonPressed(ebiten.MouseButtonRight) {
-		game.PlacingMyWarships(*usersInServer)
+		game.PlacingMyWarships(usersInServer)
 	}
 	return nil
 
@@ -43,7 +43,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	for x := 0; x < 10; x++ {
 		for y := 0; y < 10; y++ {
-			game.DrawAllPlace(x, y, screen, *usersInServer)
+			game.DrawAllPlace(x, y, screen, usersInServer)
 
 		}
 
@@ -55,21 +55,25 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 }
 
 func initialiseGame() {
-	MyID = game.MyID
+	//MyID = game.MyID
 
 	game.AddPlayer(MyID)
 
 	for {
-		usersInServer = &game.UsersInSerwer
-		if len(*usersInServer) > 0 {
+		usersInServer = game.UsersInServer
+		if len(usersInServer) > 0 {
+
+			log.Println(usersInServer[MyID].UserID)
+			log.Println(len(usersInServer))
+
 			////////////initialise plase
 
-			game.InitialPlace(*usersInServer)
-			game.InitialMyPlace(*usersInServer)
+			game.InitialPlace(usersInServer)
+			game.InitialMyPlace(usersInServer)
 
 			////////initialise warships
 
-			game.InitialEnemyWarships(*usersInServer)
+			//game.InitialEnemyWarships(	usersInServer)
 
 			return
 		}
@@ -84,25 +88,57 @@ func initialiseGame() {
 var Ready bool
 var done chan interface{}
 var interrupt chan os.Signal
+var bufferWriteX = 10000
+var bufferWriteY = 10000
+var bufferReadY int
+var bufferReadX int
 
 func receiveHandler(conn *websocket.Conn) {
 	defer close(done)
+	i := 0
 	for {
-		if MyID == "" {
+		if MyID == "" && i == 0 {
 			_, id, err := conn.ReadMessage()
 			if err != nil {
 				log.Println("All are bad !!!!!!!!!1", err)
 			}
 			MyID = string(id)
 			log.Println("MyID", MyID)
+			i++
+		} else {
+			_, msg, err := conn.ReadMessage()
+			if err != nil {
+				log.Println("Error in receive:", err)
+				return
+			}
+
+			bufferUser := game.User{}
+
+			json.Unmarshal(msg, &bufferUser)
+			//&& bufferReadX != bufferUser.LastMoveX && bufferReadY != bufferUser.LastMoveY
+			if game.UsersInServer[MyID].NumberOfMyWarship >= 10 && game.UsersInServer[MyID].UserID != bufferUser.UserID {
+				game.UsersInServer[MyID].CanMove = true
+
+				game.UsersInServer[MyID].EnemyMoveX = bufferUser.LastMoveX
+				game.UsersInServer[MyID].EnemyMoveY = bufferUser.LastMoveY
+
+				game.UsersInServer[MyID].EnemyWarships = bufferUser.MyWarships
+				//log.Printf("Received: %s\n", msg)
+				bufferReadX = bufferUser.LastMoveX
+				bufferReadY = bufferUser.LastMoveY
+				log.Println("MYID game", game.UsersInServer[MyID].UserID)
+				log.Println("my id", MyID)
+				log.Println("EnemyID", bufferUser.UserID)
+				log.Println("enemy warships ", bufferUser.EnemyWarships)
+				log.Println("my wrships ", bufferUser.MyWarships)
+			}
+
+			//og.Println("num warship ", bufferUser.NumberOfMyWarship)
+			//log.Println("num warship2 ", game.UsersInServer[MyID].NumberOfMyWarship)
+
+			//log.Println("Received: ", msg)
 		}
 
-		_, msg, err := conn.ReadMessage()
-		if err != nil {
-			log.Println("Error in receive:", err)
-			return
-		}
-		log.Printf("Received: %s\n", msg)
 	}
 }
 
@@ -128,8 +164,8 @@ func main() {
 			case <-time.After(time.Duration(1) * time.Millisecond * 1000):
 				//var msg string
 				//fmt.Fscan(os.Stdin, &msg) //write msg
-				log.Println("nunber of my warship ", game.UsersInServer[MyID].NumberOfMyWarship)
-				/*if game.UsersInServer[MyID].NumberOfMyWarship >= 10 {
+				//log.Println("nunber of my warship ", game.UsersInServer[MyID].NumberOfMyWarship)
+				if game.UsersInServer[MyID].NumberOfMyWarship >= 10 && game.UsersInServer[MyID].LastMoveX != bufferWriteX && game.UsersInServer[MyID].LastMoveY != bufferWriteY {
 
 					bufferOfUserForSend, _ := json.Marshal(game.UsersInServer[MyID])
 					err := conn.WriteMessage(websocket.TextMessage, []byte(bufferOfUserForSend))
@@ -138,15 +174,17 @@ func main() {
 						log.Println("Error during writing to websocket:", err)
 						return
 					}
+					bufferWriteX = game.UsersInServer[MyID].LastMoveX
+					bufferWriteY = game.UsersInServer[MyID].LastMoveY
 					continue
-				}*/
+				}
 
-				err := conn.WriteMessage(websocket.TextMessage, []byte("bufferOfUserForSend"))
+				/*err := conn.WriteMessage(websocket.TextMessage, []byte("bufferOfUserForSend"))
 				//err := conn.WriteMessage(websocket.TextMessage, []byte("sdfsd"))
 				if err != nil {
 					log.Println("Error during writing to websocket:", err)
 					return
-				}
+				}*/
 
 			case <-interrupt:
 				// We received a SIGINT (Ctrl + C). Terminate gracefully…
