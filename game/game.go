@@ -102,29 +102,29 @@ func Move(users Users) {
 			users[MyID].LastMoveX = bufferX
 			users[MyID].LastMoveY = bufferY
 
-			users[MyID].CanMove = !users[MyID].CanMove
+			users[MyID].CanMove = false
 		}
 	}
 
 }
 
 func EnemyMove(users Users) {
-	if users[MyID].CanMove {
-		enemyX := users[MyID].EnemyMoveX
-		enemyY := users[MyID].EnemyMoveY
-		for i := 0; i < 10; i++ {
-			if users[MyID].arrayMyPlace[(enemyX*10)+enemyY].localx == users[MyID].MyWarships[i][0] && users[MyID].arrayMyPlace[(enemyX*10)+enemyY].localy == users[MyID].MyWarships[i][1] {
-				users[MyID].arrayMyPlace[(enemyX*10)+enemyY].ShotWarship()
-				fmt.Println("shot by me")
-				return
-			}
-
+	//	if users[MyID].CanMove {
+	enemyX := users[MyID].EnemyMoveX
+	enemyY := users[MyID].EnemyMoveY
+	for i := 0; i < 10; i++ {
+		if users[MyID].arrayMyPlace[(enemyX*10)+enemyY].localx == users[MyID].MyWarships[i][0] && users[MyID].arrayMyPlace[(enemyX*10)+enemyY].localy == users[MyID].MyWarships[i][1] {
+			users[MyID].arrayMyPlace[(enemyX*10)+enemyY].ShotWarship()
+			fmt.Println("shot by me")
+			return
 		}
 
-		users[MyID].arrayMyPlace[(enemyX*10)+enemyY].UpdatePlace()
-
-		users[MyID].CanMove = !users[MyID].CanMove
 	}
+
+	users[MyID].arrayMyPlace[(enemyX*10)+enemyY].UpdatePlace()
+
+	//users[MyID].CanMove = !users[MyID].CanMove
+	//}//
 
 }
 
@@ -145,10 +145,10 @@ func PlacingMyWarships(users Users) {
 			users[MyID].updateBufferY = bufferY
 
 		}
-	} else {
+	} /* else {
 		users[MyID].CanMove = true
 
-	}
+	}*/
 }
 
 func InitialPlace(users Users) [100]Place {

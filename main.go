@@ -116,8 +116,9 @@ func receiveHandler(conn *websocket.Conn) {
 
 			json.Unmarshal(msg, &bufferUser)
 			//&& bufferReadX != bufferUser.LastMoveX && bufferReadY != bufferUser.LastMoveY
-			if game.UsersInServer[MyID].NumberOfMyWarship >= 10 && game.UsersInServer[MyID].UserID != bufferUser.UserID {
+			if game.UsersInServer[MyID].NumberOfMyWarship >= 10 && game.UsersInServer[MyID].UserID != bufferUser.UserID && usersInServer[MyID].CanMove == false {
 				game.UsersInServer[MyID].CanMove = true
+				//game.UsersInServer[MyID].CanMove = !bufferUser.CanMove
 
 				game.UsersInServer[MyID].EnemyMoveX = bufferUser.LastMoveX
 				game.UsersInServer[MyID].EnemyMoveY = bufferUser.LastMoveY
@@ -126,11 +127,14 @@ func receiveHandler(conn *websocket.Conn) {
 				//log.Printf("Received: %s\n", msg)
 				bufferReadX = bufferUser.LastMoveX
 				bufferReadY = bufferUser.LastMoveY
+
+				game.EnemyMove(usersInServer)
 				log.Println("MYID game", game.UsersInServer[MyID].UserID)
 				log.Println("my id", MyID)
 				log.Println("EnemyID", bufferUser.UserID)
 				log.Println("enemy warships ", bufferUser.EnemyWarships)
 				log.Println("my wrships ", bufferUser.MyWarships)
+				log.Println("user can move ", game.UsersInServer[MyID].CanMove)
 			}
 
 			//og.Println("num warship ", bufferUser.NumberOfMyWarship)
