@@ -116,9 +116,9 @@ func receiveHandler(conn *websocket.Conn) {
 
 			json.Unmarshal(msg, &bufferUser)
 			//&& bufferReadX != bufferUser.LastMoveX && bufferReadY != bufferUser.LastMoveY
-			if game.UsersInServer[MyID].NumberOfMyWarship >= 10 && game.UsersInServer[MyID].UserID != bufferUser.UserID && usersInServer[MyID].CanMove == false {
-				game.UsersInServer[MyID].CanMove = true
-				//game.UsersInServer[MyID].CanMove = !bufferUser.CanMove
+			if game.UsersInServer[MyID].NumberOfMyWarship >= 10 && game.UsersInServer[MyID].UserID != bufferUser.UserID {
+				//game.UsersInServer[MyID].CanMove = true
+				game.UsersInServer[MyID].CanMove = !bufferUser.CanMove
 
 				game.UsersInServer[MyID].EnemyMoveX = bufferUser.LastMoveX
 				game.UsersInServer[MyID].EnemyMoveY = bufferUser.LastMoveY
@@ -165,11 +165,11 @@ func main() {
 	go func(conn *websocket.Conn) {
 		for {
 			select {
-			case <-time.After(time.Duration(1) * time.Millisecond * 1000):
+			case <-time.After(time.Duration(1) * time.Millisecond * 100):
 				//var msg string
 				//fmt.Fscan(os.Stdin, &msg) //write msg
 				//log.Println("nunber of my warship ", game.UsersInServer[MyID].NumberOfMyWarship)
-				if game.UsersInServer[MyID].NumberOfMyWarship >= 10 && game.UsersInServer[MyID].LastMoveX != bufferWriteX && game.UsersInServer[MyID].LastMoveY != bufferWriteY {
+				if game.UsersInServer[MyID].NumberOfMyWarship >= 10 {
 
 					bufferOfUserForSend, _ := json.Marshal(game.UsersInServer[MyID])
 					err := conn.WriteMessage(websocket.TextMessage, []byte(bufferOfUserForSend))

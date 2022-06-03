@@ -209,6 +209,8 @@ func AddPlayer(userID string) *User {
 		CanMove:               false,
 		numberOfEnemyWarships: 10,
 		NumberOfMyWarship:     0,
+		//LastMoveX:             make([]int, 0),
+		//LastMoveY:             make([]int, 0),
 	}
 
 	MyID = userID
