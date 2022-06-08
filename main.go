@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"image/color"
 	_ "image/png"
 	"log"
 	"os"
@@ -29,7 +30,38 @@ type Game struct{}
 func (g *Game) Update() error {
 
 	if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
+		for i := range game.UsersInServer[MyID].MyWarships {
+			bufferSize := 0
+			for _, data := range game.UsersInServer[MyID].MyWarships[i] {
+				if game.UsersInServer[MyID].ArrayEnemyPlace[(data[0]*10)+data[1]].WasShot {
+					bufferSize++
+				}
+			}
+			if bufferSize == len(game.UsersInServer[MyID].MyWarships[i]) {
+				log.Println("I kill 1 warships")
+				game.UsersInServer[MyID].Score++
+				for _, data := range game.UsersInServer[MyID].MyWarships[i] {
+					game.UsersInServer[MyID].ArrayEnemyPlace[(data[0]*10)+data[1]].ShotWarship(color.RGBA{0, 50, 50, 255})
+				}
+			}
 
+		}
+
+		for i := range game.UsersInServer[MyID].EnemyWarships {
+			bufferSize := 0
+			for _, data := range game.UsersInServer[MyID].EnemyWarships[i] {
+				if game.UsersInServer[MyID].ArrayMyPlace[(data[0]*10)+data[1]].WasShot {
+					bufferSize++
+				}
+			}
+			if bufferSize == len(game.UsersInServer[MyID].EnemyWarships[i]) {
+				log.Println("I kill 1 warships")
+				for _, data := range game.UsersInServer[MyID].EnemyWarships[i] {
+					game.UsersInServer[MyID].ArrayMyPlace[(data[0]*10)+data[1]].ShotWarship(color.RGBA{0, 50, 50, 255})
+				}
+			}
+
+		}
 		game.Move(usersInServer)
 
 	} else if ebiten.IsMouseButtonPressed(ebiten.MouseButtonRight) {
@@ -73,8 +105,6 @@ func initialiseGame() {
 
 			////////initialise warships
 
-			//game.InitialEnemyWarships(	usersInServer)
-
 			return
 		}
 
@@ -100,7 +130,7 @@ func receiveHandler(conn *websocket.Conn) {
 		if MyID == "" && i == 0 {
 			_, id, err := conn.ReadMessage()
 			if err != nil {
-				log.Println("All are bad !!!!!!!!!1", err)
+				log.Println("I don't know who are you", err)
 			}
 			MyID = string(id)
 			log.Println("MyID", MyID)
@@ -115,32 +145,33 @@ func receiveHandler(conn *websocket.Conn) {
 			bufferUser := game.User{}
 
 			json.Unmarshal(msg, &bufferUser)
-			//&& bufferReadX != bufferUser.LastMoveX && bufferReadY != bufferUser.LastMoveY
-			if game.UsersInServer[MyID].NumberOfMyWarship >= 10 && game.UsersInServer[MyID].UserID != bufferUser.UserID {
-				//game.UsersInServer[MyID].CanMove = true
+
+			if game.UsersInServer[MyID].NumberOfMyWarship >= 8 && game.UsersInServer[MyID].UserID != bufferUser.UserID {
+
+				if bufferUser.Score == 8 {
+					log.Println("U lose")
+					return
+				}
 				game.UsersInServer[MyID].CanMove = !bufferUser.CanMove
 
 				game.UsersInServer[MyID].EnemyMoveX = bufferUser.LastMoveX
 				game.UsersInServer[MyID].EnemyMoveY = bufferUser.LastMoveY
 
 				game.UsersInServer[MyID].EnemyWarships = bufferUser.MyWarships
-				//log.Printf("Received: %s\n", msg)
+
 				bufferReadX = bufferUser.LastMoveX
 				bufferReadY = bufferUser.LastMoveY
 
 				game.EnemyMove(usersInServer)
-				log.Println("MYID game", game.UsersInServer[MyID].UserID)
-				log.Println("my id", MyID)
-				log.Println("EnemyID", bufferUser.UserID)
+
+				//log.Println("MYID game", game.UsersInServer[MyID].UserID)
+				//log.Println("my id", MyID)
+				//log.Println("EnemyID", bufferUser.UserID)
 				log.Println("enemy warships ", bufferUser.EnemyWarships)
 				log.Println("my wrships ", bufferUser.MyWarships)
 				log.Println("user can move ", game.UsersInServer[MyID].CanMove)
 			}
 
-			//og.Println("num warship ", bufferUser.NumberOfMyWarship)
-			//log.Println("num warship2 ", game.UsersInServer[MyID].NumberOfMyWarship)
-
-			//log.Println("Received: ", msg)
 		}
 
 	}
@@ -165,30 +196,27 @@ func main() {
 	go func(conn *websocket.Conn) {
 		for {
 			select {
-			case <-time.After(time.Duration(1) * time.Millisecond * 100):
-				//var msg string
-				//fmt.Fscan(os.Stdin, &msg) //write msg
-				//log.Println("nunber of my warship ", game.UsersInServer[MyID].NumberOfMyWarship)
-				if game.UsersInServer[MyID].NumberOfMyWarship >= 10 {
+			case <-time.After(time.Duration(1) * time.Millisecond * 200):
+				if game.UsersInServer[MyID].Score == 8 {
+
+					log.Println("U win")
+					return
+
+				}
+				if game.UsersInServer[MyID].NumberOfMyWarship >= 8 {
 
 					bufferOfUserForSend, _ := json.Marshal(game.UsersInServer[MyID])
 					err := conn.WriteMessage(websocket.TextMessage, []byte(bufferOfUserForSend))
-					//err := conn.WriteMessage(websocket.TextMessage, []byte("sdfsd"))
+
 					if err != nil {
 						log.Println("Error during writing to websocket:", err)
 						return
 					}
+
 					bufferWriteX = game.UsersInServer[MyID].LastMoveX
 					bufferWriteY = game.UsersInServer[MyID].LastMoveY
 					continue
 				}
-
-				/*err := conn.WriteMessage(websocket.TextMessage, []byte("bufferOfUserForSend"))
-				//err := conn.WriteMessage(websocket.TextMessage, []byte("sdfsd"))
-				if err != nil {
-					log.Println("Error during writing to websocket:", err)
-					return
-				}*/
 
 			case <-interrupt:
 				// We received a SIGINT (Ctrl + C). Terminate gracefully…

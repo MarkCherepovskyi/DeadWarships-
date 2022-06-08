@@ -3,7 +3,6 @@ package game
 import (
 	"fmt"
 	"log"
-	"math/rand"
 
 	"image/color"
 
@@ -13,23 +12,26 @@ import (
 type User struct {
 	UserID                       string     `json:"id"`
 	CanMove                      bool       `json:"canMove"`
-	EnemyWarships                [10][2]int `json:"EnemyWarships"`
-	MyWarships                   [10][2]int `json:"MyWarships"`
-	arrayEnemyPlace              [100]Place //`json:"enemyPlace"`
-	arrayMyPlace                 [100]Place //`json:"myPlace"`
+	EnemyWarships                [][][]int  `json:"EnemyWarships"`
+	MyWarships                   [][][]int  `json:"MyWarships"`
+	ArrayEnemyPlace              [100]Place //`json:"enemyPlace"`
+	ArrayMyPlace                 [100]Place //`json:"myPlace"`
 	NumberOfMyWarship            int
 	numberOfEnemyWarships        int
 	updateBufferX, updateBufferY int
 	LastMoveX                    int `json:"lastMoveX"`
 	LastMoveY                    int `json:"lastMoveY"`
 	EnemyMoveX, EnemyMoveY       int
+	Score                        int `json:"Score"`
 }
 
 type Users map[string]*User
 
 var (
-	UsersInServer = make(Users)
-	MyID          = ""
+	UsersInServer         = make(Users)
+	MyID                  = ""
+	bufferNumOfMyWarships int
+	bufferSizeOfMyWarship int
 )
 
 type Place struct {
@@ -38,19 +40,23 @@ type Place struct {
 	placeX, placeY int
 	value          bool
 	colorPlace     color.Color
+	WasShot        bool
 }
 
-func (p *Place) ShotWarship() error {
-	p.colorPlace = color.RGBA{0, 0, 255, 255}
+func (p *Place) ShotWarship(color color.Color) error {
+	p.colorPlace = color
+	p.WasShot = true
 	return nil
 }
 
-func (p *Place) CreateWarships(bufferX, bufferY, num int, users Users) error {
+func (p *Place) CreateWarships(bufferX, bufferY, num int, size int, users Users) error {
 
-	users[MyID].MyWarships[num][0] = bufferX
-	users[MyID].MyWarships[num][1] = bufferY
+	users[MyID].MyWarships[num][size][0] = bufferX
+	users[MyID].MyWarships[num][size][1] = bufferY
+	log.Println("X", bufferX)
+	log.Println("Y", bufferY)
+	bufferSizeOfMyWarship++
 	p.colorPlace = color.RGBA{0, 0, 255, 255}
-	users[MyID].NumberOfMyWarship++
 
 	return nil
 }
@@ -66,7 +72,7 @@ func (p *Place) UpdatePlace() error {
 
 func (p *Place) DrawPlace(screen *ebiten.Image) error {
 	if p.colorPlace == nil {
-		p.colorPlace = color.RGBA{255, 0, 255, 255}
+		p.colorPlace = color.RGBA{0, 0, 255, 255}
 	}
 
 	for i := p.placeX; i < p.placeX+p.size; i++ {
@@ -81,6 +87,7 @@ func (p *Place) DrawPlace(screen *ebiten.Image) error {
 
 func Move(users Users) {
 	if users[MyID].CanMove {
+
 		mx, my := ebiten.CursorPosition()
 		if mx >= 10 && mx <= 260 && my <= 260 && my >= 10 {
 			bufferX := int((mx - 10) / 25)
@@ -88,16 +95,19 @@ func Move(users Users) {
 
 			fmt.Println("You press button")
 
-			for i := 0; i < 10; i++ {
-				if users[MyID].arrayEnemyPlace[(bufferX*10)+bufferY].localx == users[MyID].EnemyWarships[i][0] && users[MyID].arrayEnemyPlace[(bufferX*10)+bufferY].localy == users[MyID].EnemyWarships[i][1] {
-					users[MyID].arrayEnemyPlace[(bufferX*10)+bufferY].ShotWarship()
-					fmt.Println("shot")
-					return
+			for i := range users[MyID].MyWarships {
+
+				for j := range users[MyID].MyWarships[i] {
+					if users[MyID].ArrayEnemyPlace[(bufferX*10)+bufferY].localx == users[MyID].EnemyWarships[i][j][1] && users[MyID].ArrayEnemyPlace[(bufferX*10)+bufferY].localy == users[MyID].EnemyWarships[i][j][0] {
+						users[MyID].ArrayEnemyPlace[(bufferX*10)+bufferY].ShotWarship(color.RGBA{0, 0, 255, 255})
+
+						users[MyID].LastMoveX = bufferX
+						users[MyID].LastMoveY = bufferY
+						return
+					}
 				}
-
 			}
-
-			users[MyID].arrayEnemyPlace[(bufferX*10)+bufferY].UpdatePlace()
+			users[MyID].ArrayEnemyPlace[(bufferX*10)+bufferY].UpdatePlace()
 
 			users[MyID].LastMoveX = bufferX
 			users[MyID].LastMoveY = bufferY
@@ -109,46 +119,49 @@ func Move(users Users) {
 }
 
 func EnemyMove(users Users) {
-	//	if users[MyID].CanMove {
+
 	enemyX := users[MyID].EnemyMoveX
 	enemyY := users[MyID].EnemyMoveY
-	for i := 0; i < 10; i++ {
-		if users[MyID].arrayMyPlace[(enemyX*10)+enemyY].localx == users[MyID].MyWarships[i][0] && users[MyID].arrayMyPlace[(enemyX*10)+enemyY].localy == users[MyID].MyWarships[i][1] {
-			users[MyID].arrayMyPlace[(enemyX*10)+enemyY].ShotWarship()
-			fmt.Println("shot by me")
-			return
+	for i := range users[MyID].MyWarships {
+
+		for j := range users[MyID].MyWarships[i] {
+			if users[MyID].ArrayMyPlace[(enemyX*10)+enemyY].localx == users[MyID].MyWarships[i][j][1] && users[MyID].ArrayMyPlace[(enemyX*10)+enemyY].localy == users[MyID].MyWarships[i][j][0] {
+				users[MyID].ArrayMyPlace[(enemyX*10)+enemyY].ShotWarship(color.RGBA{0, 255, 255, 255})
+				return
+			}
 		}
 
 	}
 
-	users[MyID].arrayMyPlace[(enemyX*10)+enemyY].UpdatePlace()
-
-	//users[MyID].CanMove = !users[MyID].CanMove
-	//}//
+	users[MyID].ArrayMyPlace[(enemyX*10)+enemyY].UpdatePlace()
 
 }
 
 func PlacingMyWarships(users Users) {
-	if users[MyID].NumberOfMyWarship < 10 {
-		mx, my := ebiten.CursorPosition()
+	if users[MyID].NumberOfMyWarship < 8 {
 
+		mx, my := ebiten.CursorPosition()
 		if mx >= 400 && mx <= 650 && my <= 260 && my >= 10 {
 
 			bufferX := int((mx - 400) / 25)
 			bufferY := int((my - 10) / 25)
 			fmt.Println("You press button1111")
 			if bufferX != users[MyID].updateBufferX || bufferY != users[MyID].updateBufferY {
-				users[MyID].arrayMyPlace[(bufferX*10)+bufferY].CreateWarships(bufferX, bufferY, users[MyID].NumberOfMyWarship, users)
+				users[MyID].ArrayMyPlace[(bufferX*10)+bufferY].CreateWarships(bufferX, bufferY, bufferNumOfMyWarships, bufferSizeOfMyWarship, users)
 
+			}
+			if bufferSizeOfMyWarship == len(users[MyID].MyWarships[bufferNumOfMyWarships]) {
+				bufferSizeOfMyWarship = 0
+				bufferNumOfMyWarships++
+				users[MyID].NumberOfMyWarship++
+				log.Println("I add 1 warships")
 			}
 			users[MyID].updateBufferX = bufferX
 			users[MyID].updateBufferY = bufferY
 
 		}
-	} /* else {
-		users[MyID].CanMove = true
 
-	}*/
+	}
 }
 
 func InitialPlace(users Users) [100]Place {
@@ -158,16 +171,17 @@ func InitialPlace(users Users) [100]Place {
 
 	for x := 0; x < 10; x++ {
 		for y := 0; y < 10; y++ {
-			users[MyID].arrayEnemyPlace[(y*10)+x] = Place{x, y, 20, placeX, placeY, false, purpleCol}
+			users[MyID].ArrayEnemyPlace[(y*10)+x] = Place{x, y, 20, placeX, placeY, false, purpleCol, false}
 			placeX += 25
 
 		}
 		placeY += 25
 		placeX = 10
 	}
-	return users[MyID].arrayEnemyPlace
+	return users[MyID].ArrayEnemyPlace
 }
 
+/*
 func InitialEnemyWarships(users Users) [10][2]int {
 	for i := 0; i < users[MyID].numberOfEnemyWarships; i++ {
 		for j := 0; j < 2; j++ {
@@ -178,26 +192,25 @@ func InitialEnemyWarships(users Users) [10][2]int {
 	}
 	return users[MyID].EnemyWarships
 }
+*/
 
 func InitialMyPlace(users Users) [100]Place {
 	purpleCol := color.RGBA{255, 0, 255, 255} //настройка цвета для текста
 	placeX, placeY := 400, 10
 	for x := 0; x < 10; x++ {
 		for y := 0; y < 10; y++ {
-
-			users[MyID].arrayMyPlace[(y*10)+x] = Place{x, y, 20, placeX, placeY, false, purpleCol}
+			users[MyID].ArrayMyPlace[(y*10)+x] = Place{x, y, 20, placeX, placeY, false, purpleCol, false}
 			placeX += 25
-
 		}
 		placeY += 25
 		placeX = 400
 	}
-	return users[MyID].arrayMyPlace
+	return users[MyID].ArrayMyPlace
 }
 
 func DrawAllPlace(x, y int, screen *ebiten.Image, users Users) {
-	users[MyID].arrayEnemyPlace[(x*10)+y].DrawPlace(screen)
-	users[MyID].arrayMyPlace[(x*10)+y].DrawPlace(screen)
+	users[MyID].ArrayEnemyPlace[(x*10)+y].DrawPlace(screen)
+	users[MyID].ArrayMyPlace[(x*10)+y].DrawPlace(screen)
 }
 
 ///////
@@ -207,10 +220,25 @@ func AddPlayer(userID string) *User {
 	user := &User{
 		UserID:                userID,
 		CanMove:               false,
-		numberOfEnemyWarships: 10,
+		numberOfEnemyWarships: 8,
 		NumberOfMyWarship:     0,
-		//LastMoveX:             make([]int, 0),
-		//LastMoveY:             make([]int, 0),
+		Score:                 0,
+		MyWarships:            make([][][]int, 8),
+	}
+
+	user.MyWarships[0] = make([][]int, 4)
+	user.MyWarships[1] = make([][]int, 3)
+	user.MyWarships[2] = make([][]int, 3)
+	user.MyWarships[3] = make([][]int, 2)
+	user.MyWarships[4] = make([][]int, 2)
+	user.MyWarships[5] = make([][]int, 1)
+	user.MyWarships[6] = make([][]int, 1)
+	user.MyWarships[7] = make([][]int, 1)
+
+	for i := range user.MyWarships {
+		for j := range user.MyWarships[i] {
+			user.MyWarships[i][j] = make([]int, 2)
+		}
 	}
 
 	MyID = userID
