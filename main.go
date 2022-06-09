@@ -39,7 +39,7 @@ func (g *Game) Update() error {
 			}
 			if bufferSize == len(game.UsersInServer[MyID].MyWarships[i]) {
 				log.Println("I kill 1 warships")
-				game.UsersInServer[MyID].Score++
+
 				for _, data := range game.UsersInServer[MyID].MyWarships[i] {
 					game.UsersInServer[MyID].ArrayEnemyPlace[(data[0]*10)+data[1]].ShotWarship(color.RGBA{0, 50, 50, 255})
 				}
@@ -148,10 +148,29 @@ func receiveHandler(conn *websocket.Conn) {
 
 			if game.UsersInServer[MyID].NumberOfMyWarship >= 8 && game.UsersInServer[MyID].UserID != bufferUser.UserID {
 
-				if bufferUser.Score == 8 {
+				bufferForAll := 0
+				for i := range game.UsersInServer[MyID].MyWarships {
+					bufferSize := 0
+					for _, data := range game.UsersInServer[MyID].MyWarships[i] {
+						if game.UsersInServer[MyID].ArrayMyPlace[(data[0]*10)+data[1]].WasShot {
+							bufferSize++
+						}
+					}
+					if bufferSize == len(game.UsersInServer[MyID].MyWarships[i]) {
+						for _, data := range game.UsersInServer[MyID].MyWarships[i] {
+							game.UsersInServer[MyID].ArrayMyPlace[(data[0]*10)+data[1]].Kill()
+							bufferForAll++
+						}
+
+					}
+				}
+
+				//if len(bufferUser.DeadWarships) == 8 {
+				if bufferForAll == 8 {
 					log.Println("U lose")
 					return
 				}
+
 				game.UsersInServer[MyID].CanMove = !bufferUser.CanMove
 
 				game.UsersInServer[MyID].EnemyMoveX = bufferUser.LastMoveX
@@ -164,11 +183,11 @@ func receiveHandler(conn *websocket.Conn) {
 
 				game.EnemyMove(usersInServer)
 
-				//log.Println("MYID game", game.UsersInServer[MyID].UserID)
+				/*//log.Println("MYID game", game.UsersInServer[MyID].UserID)
 				//log.Println("my id", MyID)
 				//log.Println("EnemyID", bufferUser.UserID)
 				log.Println("enemy warships ", bufferUser.EnemyWarships)
-				log.Println("my wrships ", bufferUser.MyWarships)
+				log.Println("my wrships ", bufferUser.MyWarships)*/
 				log.Println("user can move ", game.UsersInServer[MyID].CanMove)
 			}
 
@@ -195,9 +214,25 @@ func main() {
 	// We send our relevant packets here
 	go func(conn *websocket.Conn) {
 		for {
+
 			select {
-			case <-time.After(time.Duration(1) * time.Millisecond * 200):
-				if game.UsersInServer[MyID].Score == 8 {
+			case <-time.After(time.Duration(1) * time.Millisecond * 100):
+				bufferForAll := 0
+				for i := range game.UsersInServer[MyID].EnemyWarships {
+					bufferSize := 0
+					for _, data := range game.UsersInServer[MyID].EnemyWarships[i] {
+						if game.UsersInServer[MyID].ArrayEnemyPlace[(data[0]*10)+data[1]].WasShot {
+							bufferSize++
+						}
+					}
+					if bufferSize == len(game.UsersInServer[MyID].EnemyWarships[i]) {
+						for _, data := range game.UsersInServer[MyID].EnemyWarships[i] {
+							game.UsersInServer[MyID].ArrayEnemyPlace[(data[0]*10)+data[1]].Kill()
+						}
+
+					}
+				}
+				if bufferForAll == 8 {
 
 					log.Println("U win")
 					return

@@ -22,7 +22,7 @@ type User struct {
 	LastMoveX                    int `json:"lastMoveX"`
 	LastMoveY                    int `json:"lastMoveY"`
 	EnemyMoveX, EnemyMoveY       int
-	Score                        int `json:"Score"`
+	DeadWarships                 []int
 }
 
 type Users map[string]*User
@@ -68,6 +68,10 @@ func (p *Place) UpdatePlace() error {
 
 	}
 	return nil
+}
+
+func (p *Place) Kill() {
+	p.colorPlace = color.RGBA{0, 50, 50, 1}
 }
 
 func (p *Place) DrawPlace(screen *ebiten.Image) error {
@@ -222,7 +226,7 @@ func AddPlayer(userID string) *User {
 		CanMove:               false,
 		numberOfEnemyWarships: 8,
 		NumberOfMyWarship:     0,
-		Score:                 0,
+		DeadWarships:          make([]int, 0),
 		MyWarships:            make([][][]int, 8),
 	}
 
