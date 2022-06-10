@@ -167,7 +167,9 @@ func receiveHandler(conn *websocket.Conn) {
 
 				//if len(bufferUser.DeadWarships) == 8 {
 				if bufferForAll == 8 {
-					log.Println("U lose")
+					for _, data := range game.UsersInServer[MyID].ArrayMyPlace {
+						data.ShotWarship(color.RGBA{0, 0, 0, 250})
+					}
 					return
 				}
 
@@ -183,11 +185,6 @@ func receiveHandler(conn *websocket.Conn) {
 
 				game.EnemyMove(usersInServer)
 
-				/*//log.Println("MYID game", game.UsersInServer[MyID].UserID)
-				//log.Println("my id", MyID)
-				//log.Println("EnemyID", bufferUser.UserID)
-				log.Println("enemy warships ", bufferUser.EnemyWarships)
-				log.Println("my wrships ", bufferUser.MyWarships)*/
 				log.Println("user can move ", game.UsersInServer[MyID].CanMove)
 			}
 
@@ -217,22 +214,39 @@ func main() {
 
 			select {
 			case <-time.After(time.Duration(1) * time.Millisecond * 100):
-				bufferForAll := 0
+				////////////////
+
 				for i := range game.UsersInServer[MyID].EnemyWarships {
 					bufferSize := 0
+
 					for _, data := range game.UsersInServer[MyID].EnemyWarships[i] {
 						if game.UsersInServer[MyID].ArrayEnemyPlace[(data[0]*10)+data[1]].WasShot {
 							bufferSize++
 						}
 					}
+
 					if bufferSize == len(game.UsersInServer[MyID].EnemyWarships[i]) {
 						for _, data := range game.UsersInServer[MyID].EnemyWarships[i] {
 							game.UsersInServer[MyID].ArrayEnemyPlace[(data[0]*10)+data[1]].Kill()
 						}
 
+						bufferInArray := true
+						for _, data := range game.UsersInServer[MyID].DeadWarships {
+							if data == i {
+								bufferInArray = false
+								break
+							}
+						}
+						if bufferInArray {
+							game.UsersInServer[MyID].DeadWarships = append(game.UsersInServer[MyID].DeadWarships, i)
+						}
+
 					}
+
+					log.Println("Num of dead warship", len(game.UsersInServer[MyID].DeadWarships))
 				}
-				if bufferForAll == 8 {
+				////////////
+				if len(game.UsersInServer[MyID].DeadWarships) == 8 {
 
 					log.Println("U win")
 					return

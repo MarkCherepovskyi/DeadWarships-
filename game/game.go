@@ -22,7 +22,8 @@ type User struct {
 	LastMoveX                    int `json:"lastMoveX"`
 	LastMoveY                    int `json:"lastMoveY"`
 	EnemyMoveX, EnemyMoveY       int
-	DeadWarships                 []int
+	DeadWarships                 []int //how many I kill enemy warships
+	DeadMyWarships               []int //how many enemy kill my warships
 }
 
 type Users map[string]*User
@@ -227,6 +228,7 @@ func AddPlayer(userID string) *User {
 		numberOfEnemyWarships: 8,
 		NumberOfMyWarship:     0,
 		DeadWarships:          make([]int, 0),
+		DeadMyWarships:        make([]int, 0),
 		MyWarships:            make([][][]int, 8),
 	}
 
