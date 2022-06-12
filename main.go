@@ -21,9 +21,10 @@ const (
 )
 
 var (
-	Rules = false
-	win   bool
-	lose  bool
+	Rules         = false
+	win           bool
+	lose          bool
+	moscowDrowned = false
 
 	MyID          string
 	usersInServer game.Users
@@ -72,6 +73,10 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	} else if lose {
 		ebitenutil.DebugPrintAt(screen, " U lose", 300, 20)
 	}
+
+	if moscowDrowned {
+		ebitenutil.DebugPrintAt(screen, "Neptune found moscow", 265, 50)
+	}
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
@@ -110,6 +115,7 @@ func initialiseGame() {
 var Ready bool
 var done chan interface{}
 var interrupt chan os.Signal
+
 var bufferWriteX = 10000
 var bufferWriteY = 10000
 var bufferReadY int
@@ -138,6 +144,7 @@ func checkEnemyDead() {
 			}
 			if bufferInArray {
 				game.UsersInServer[MyID].DeadMyWarships = append(game.UsersInServer[MyID].DeadMyWarships, i)
+
 			}
 
 		}
@@ -175,6 +182,9 @@ func checkMyDead() {
 			}
 			if bufferInArray {
 				game.UsersInServer[MyID].DeadWarships = append(game.UsersInServer[MyID].DeadWarships, i)
+				if i == 0 {
+					moscowDrowned = true
+				}
 			}
 
 		}
