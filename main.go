@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"image/color"
 	_ "image/png"
 	"log"
 	"os"
@@ -42,38 +41,7 @@ type Game struct{}
 func (g *Game) Update() error {
 
 	if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
-		for i := range game.UsersInServer[MyID].MyWarships {
-			bufferSize := 0
-			for _, data := range game.UsersInServer[MyID].MyWarships[i] {
-				if game.UsersInServer[MyID].ArrayEnemyPlace[(data[0]*10)+data[1]].WasShot {
-					bufferSize++
-				}
-			}
-			if bufferSize == len(game.UsersInServer[MyID].MyWarships[i]) {
-				log.Println("I kill 1 warships")
 
-				for _, data := range game.UsersInServer[MyID].MyWarships[i] {
-					game.UsersInServer[MyID].ArrayEnemyPlace[(data[0]*10)+data[1]].ShotWarship(color.RGBA{0, 50, 50, 255})
-				}
-			}
-
-		}
-
-		for i := range game.UsersInServer[MyID].EnemyWarships {
-			bufferSize := 0
-			for _, data := range game.UsersInServer[MyID].EnemyWarships[i] {
-				if game.UsersInServer[MyID].ArrayMyPlace[(data[0]*10)+data[1]].WasShot {
-					bufferSize++
-				}
-			}
-			if bufferSize == len(game.UsersInServer[MyID].EnemyWarships[i]) {
-				log.Println("I kill 1 warships")
-				for _, data := range game.UsersInServer[MyID].EnemyWarships[i] {
-					game.UsersInServer[MyID].ArrayMyPlace[(data[0]*10)+data[1]].ShotWarship(color.RGBA{0, 50, 50, 255})
-				}
-			}
-
-		}
 		game.Move(usersInServer)
 
 	} else if ebiten.IsMouseButtonPressed(ebiten.MouseButtonRight) {
@@ -161,12 +129,22 @@ func checkEnemyDead() {
 				game.UsersInServer[MyID].ArrayMyPlace[(data[0]*10)+data[1]].Kill()
 				bufferForAll++
 			}
+			bufferInArray := true
+			for _, data := range game.UsersInServer[MyID].DeadMyWarships {
+				if data == i {
+					bufferInArray = false
+					break
+				}
+			}
+			if bufferInArray {
+				game.UsersInServer[MyID].DeadMyWarships = append(game.UsersInServer[MyID].DeadMyWarships, i)
+			}
 
 		}
 	}
 
 	//if len(bufferUser.DeadWarships) == 8 {
-	if bufferForAll == 8 {
+	if len(game.UsersInServer[MyID].DeadMyWarships) == 8 {
 		lose = true
 
 		return

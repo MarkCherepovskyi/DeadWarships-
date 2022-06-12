@@ -1,7 +1,6 @@
 package game
 
 import (
-	"fmt"
 	"log"
 
 	"image/color"
@@ -98,13 +97,11 @@ func Move(users Users) {
 			bufferX := int((mx - 10) / 25)
 			bufferY := int((my - 10) / 25)
 
-			fmt.Println("You press button")
-
 			for i := range users[MyID].MyWarships {
 
 				for j := range users[MyID].MyWarships[i] {
 					if users[MyID].ArrayEnemyPlace[(bufferX*10)+bufferY].localx == users[MyID].EnemyWarships[i][j][1] && users[MyID].ArrayEnemyPlace[(bufferX*10)+bufferY].localy == users[MyID].EnemyWarships[i][j][0] {
-						users[MyID].ArrayEnemyPlace[(bufferX*10)+bufferY].ShotWarship(color.RGBA{0, 0, 255, 255})
+						users[MyID].ArrayEnemyPlace[(bufferX*10)+bufferY].ShotWarship(color.RGBA{0, 255, 255, 255})
 
 						users[MyID].LastMoveX = bufferX
 						users[MyID].LastMoveY = bufferY
@@ -150,7 +147,7 @@ func PlacingMyWarships(users Users) {
 
 			bufferX := int((mx - 400) / 25)
 			bufferY := int((my - 10) / 25)
-			fmt.Println("You press button1111")
+
 			if bufferX != users[MyID].updateBufferX || bufferY != users[MyID].updateBufferY {
 				users[MyID].ArrayMyPlace[(bufferX*10)+bufferY].CreateWarships(bufferX, bufferY, bufferNumOfMyWarships, bufferSizeOfMyWarship, users)
 
