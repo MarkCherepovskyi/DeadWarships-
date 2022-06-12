@@ -13,6 +13,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	ebiten "github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 )
 
 const (
@@ -21,8 +22,19 @@ const (
 )
 
 var (
+	Rules = false
+	win   bool
+	lose  bool
+
 	MyID          string
 	usersInServer game.Users
+	msg           = `When the window opens - you need to place the ships. To locate, right-click on the desired cell. 
+	Also keep in mind that ships must be placed in a certain order: 4x, 3x, 3x, 2x, 2x, and 3 single-deck.
+	 After that, the program will start sending requests to the server and wait for a response.
+	  When the opponent also deploys all the ships - the game will begin.
+	Each player takes turns shooting at the opponent's ships. To do this,
+	 use the left mouse button, which is pressed on the desired cell.
+	  If the player is simply wounded, the injured deck is blue, if the ship sank (Like Moscow) - it is painted black.`
 )
 
 type Game struct{}
@@ -66,6 +78,9 @@ func (g *Game) Update() error {
 
 	} else if ebiten.IsMouseButtonPressed(ebiten.MouseButtonRight) {
 		game.PlacingMyWarships(usersInServer)
+	} else if ebiten.IsMouseButtonPressed(ebiten.MouseButtonMiddle) {
+		Rules = !Rules
+
 	}
 	return nil
 
@@ -79,6 +94,15 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 		}
 
+	}
+	if Rules {
+		ebitenutil.DebugPrintAt(screen, msg, 20, 270)
+	}
+
+	if win {
+		ebitenutil.DebugPrintAt(screen, " U win", 300, 20)
+	} else if lose {
+		ebitenutil.DebugPrintAt(screen, " U lose", 300, 20)
 	}
 }
 
@@ -123,6 +147,72 @@ var bufferWriteY = 10000
 var bufferReadY int
 var bufferReadX int
 
+func checkEnemyDead() {
+	bufferForAll := 0
+	for i := range game.UsersInServer[MyID].MyWarships {
+		bufferSize := 0
+		for _, data := range game.UsersInServer[MyID].MyWarships[i] {
+			if game.UsersInServer[MyID].ArrayMyPlace[(data[0]*10)+data[1]].WasShot {
+				bufferSize++
+			}
+		}
+		if bufferSize == len(game.UsersInServer[MyID].MyWarships[i]) {
+			for _, data := range game.UsersInServer[MyID].MyWarships[i] {
+				game.UsersInServer[MyID].ArrayMyPlace[(data[0]*10)+data[1]].Kill()
+				bufferForAll++
+			}
+
+		}
+	}
+
+	//if len(bufferUser.DeadWarships) == 8 {
+	if bufferForAll == 8 {
+		lose = true
+
+		return
+	}
+}
+
+func checkMyDead() {
+	for i := range game.UsersInServer[MyID].EnemyWarships {
+		bufferSize := 0
+
+		for _, data := range game.UsersInServer[MyID].EnemyWarships[i] {
+			if game.UsersInServer[MyID].ArrayEnemyPlace[(data[0]*10)+data[1]].WasShot {
+				bufferSize++
+			}
+		}
+
+		if bufferSize == len(game.UsersInServer[MyID].EnemyWarships[i]) {
+			for _, data := range game.UsersInServer[MyID].EnemyWarships[i] {
+				game.UsersInServer[MyID].ArrayEnemyPlace[(data[0]*10)+data[1]].Kill()
+			}
+
+			bufferInArray := true
+			for _, data := range game.UsersInServer[MyID].DeadWarships {
+				if data == i {
+					bufferInArray = false
+					break
+				}
+			}
+			if bufferInArray {
+				game.UsersInServer[MyID].DeadWarships = append(game.UsersInServer[MyID].DeadWarships, i)
+			}
+
+		}
+
+		log.Println("Num of dead warship", len(game.UsersInServer[MyID].DeadWarships))
+	}
+	////////////
+	if len(game.UsersInServer[MyID].DeadWarships) == 8 {
+
+		log.Println("U win")
+		win = true
+		return
+
+	}
+}
+
 func receiveHandler(conn *websocket.Conn) {
 	defer close(done)
 	i := 0
@@ -145,33 +235,8 @@ func receiveHandler(conn *websocket.Conn) {
 			bufferUser := game.User{}
 
 			json.Unmarshal(msg, &bufferUser)
-
+			go checkEnemyDead()
 			if game.UsersInServer[MyID].NumberOfMyWarship >= 8 && game.UsersInServer[MyID].UserID != bufferUser.UserID {
-
-				bufferForAll := 0
-				for i := range game.UsersInServer[MyID].MyWarships {
-					bufferSize := 0
-					for _, data := range game.UsersInServer[MyID].MyWarships[i] {
-						if game.UsersInServer[MyID].ArrayMyPlace[(data[0]*10)+data[1]].WasShot {
-							bufferSize++
-						}
-					}
-					if bufferSize == len(game.UsersInServer[MyID].MyWarships[i]) {
-						for _, data := range game.UsersInServer[MyID].MyWarships[i] {
-							game.UsersInServer[MyID].ArrayMyPlace[(data[0]*10)+data[1]].Kill()
-							bufferForAll++
-						}
-
-					}
-				}
-
-				//if len(bufferUser.DeadWarships) == 8 {
-				if bufferForAll == 8 {
-					for _, data := range game.UsersInServer[MyID].ArrayMyPlace {
-						data.ShotWarship(color.RGBA{0, 0, 0, 250})
-					}
-					return
-				}
 
 				game.UsersInServer[MyID].CanMove = !bufferUser.CanMove
 
@@ -215,43 +280,7 @@ func main() {
 			select {
 			case <-time.After(time.Duration(1) * time.Millisecond * 100):
 				////////////////
-
-				for i := range game.UsersInServer[MyID].EnemyWarships {
-					bufferSize := 0
-
-					for _, data := range game.UsersInServer[MyID].EnemyWarships[i] {
-						if game.UsersInServer[MyID].ArrayEnemyPlace[(data[0]*10)+data[1]].WasShot {
-							bufferSize++
-						}
-					}
-
-					if bufferSize == len(game.UsersInServer[MyID].EnemyWarships[i]) {
-						for _, data := range game.UsersInServer[MyID].EnemyWarships[i] {
-							game.UsersInServer[MyID].ArrayEnemyPlace[(data[0]*10)+data[1]].Kill()
-						}
-
-						bufferInArray := true
-						for _, data := range game.UsersInServer[MyID].DeadWarships {
-							if data == i {
-								bufferInArray = false
-								break
-							}
-						}
-						if bufferInArray {
-							game.UsersInServer[MyID].DeadWarships = append(game.UsersInServer[MyID].DeadWarships, i)
-						}
-
-					}
-
-					log.Println("Num of dead warship", len(game.UsersInServer[MyID].DeadWarships))
-				}
-				////////////
-				if len(game.UsersInServer[MyID].DeadWarships) == 8 {
-
-					log.Println("U win")
-					return
-
-				}
+				go checkMyDead()
 				if game.UsersInServer[MyID].NumberOfMyWarship >= 8 {
 
 					bufferOfUserForSend, _ := json.Marshal(game.UsersInServer[MyID])
